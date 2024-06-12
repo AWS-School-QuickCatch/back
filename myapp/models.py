@@ -12,7 +12,8 @@ class HomeShopping(models.Model):
 
 
 class Product(models.Model):
-    product_id = models.AutoField(primary_key=True)
+    #product_id = models.AutoField(primary_key=True)   // data type 변경되어서 수정함
+    product_id = models.CharField(primary_key=True, max_length=255)
     home_shopping = models.ForeignKey(HomeShopping, on_delete=models.CASCADE)
     product_url = models.CharField(max_length=255)
     product_name = models.CharField(max_length=255)
