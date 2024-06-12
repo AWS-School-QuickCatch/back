@@ -3,7 +3,6 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
 from .models import Product, HomeShopping, BroadcastSchedule
-from .serializers import BroadcastProductSerializer
 import datetime
 
 class BroadcastProductListView(APIView):
@@ -23,30 +22,33 @@ class BroadcastProductListView(APIView):
             return Response({"message": "Invalid date format"}, status=status.HTTP_400_BAD_REQUEST)
 
         sites = [site_name_1, site_name_2, site_name_3]
-        home_shopping_sites = HomeShopping.objects.filter(name__in=sites)
+        home_shopping_sites = HomeShopping.objects.filter(home_shopping_id__in=sites)
 
         result_list = []
 
         for site in home_shopping_sites:
-            products = Product.objects.filter(home_shopping=site, broadcast_product=True)
+            # BroadcastSchedule에서 날짜와 홈쇼핑사로 필터링
+            schedules = BroadcastSchedule.objects.filter(
+                broadcast_date=broadcast_date,
+                product__home_shopping=site
+            )
             product_list = []
 
-            for product in products:
-                schedule = BroadcastSchedule.objects.filter(product=product, broadcast_date=broadcast_date).first()
-                if schedule:
-                    now_live_yn = "Y" if schedule.broadcast_time_start <= datetime.datetime.now().time() <= schedule.broadcast_time_end else "N"
-                    product_data = {
-                        "p_id": product.product_id,
-                        "p_name": product.product_name,
-                        "p_price": f"{product.price:,}원",
-                        "live_time": schedule.broadcast_time_start.strftime("%p %I시") if schedule else None,
-                        "now_live_yn": now_live_yn,
-                        "img_url": product.product_image_url,
-                        "p_url": product.product_url,
-                        "live_start_time": schedule.broadcast_time_start.strftime("%H:%M") if schedule else None,
-                        "live_end_time": schedule.broadcast_time_end.strftime("%H:%M") if schedule else None
-                    }
-                    product_list.append(product_data)
+            for schedule in schedules:
+                product = schedule.product
+                now_live_yn = "Y" if schedule.broadcast_time_start <= datetime.datetime.now().time() <= schedule.broadcast_time_end else "N"
+                product_data = {
+                    "p_id": product.product_id,
+                    "p_name": product.product_name,
+                    "p_price": f"{product.price:,}원",
+                    "live_time": schedule.broadcast_time_start.strftime("%H:%M:%S") if schedule else None,
+                    "now_live_yn": now_live_yn,
+                    "img_url": product.product_image_url,
+                    "p_url": product.product_url,
+                    "live_start_time": schedule.broadcast_time_start.strftime("%H:%M:%S") if schedule else None,
+                    "live_end_time": schedule.broadcast_time_end.strftime("%H:%M:%S") if schedule else None
+                }
+                product_list.append(product_data)
 
             result_list.append({
                 "site_name": site.name,
