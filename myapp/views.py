@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
 from .models import Product, HomeShopping, BroadcastSchedule, BroadcastProduct, SimilarProduct
-import datetime
+# import datetime
 from datetime import datetime 
 
 #홈쇼핑 방송상품 리스트(메인) 페이지
@@ -19,7 +19,7 @@ class BroadcastProductListView(APIView):
             return Response({"message": "Missing required parameters"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            broadcast_date = datetime.datetime.strptime(date, '%Y-%m-%d').date()
+            broadcast_date = datetime.strptime(date, '%Y-%m-%d').date()
         except ValueError:
             return Response({"message": "Invalid date format"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -38,7 +38,7 @@ class BroadcastProductListView(APIView):
 
             for schedule in schedules:
                 product = schedule.product
-                now_live_yn = "Y" if schedule.broadcast_time_start <= datetime.datetime.now().time() <= schedule.broadcast_time_end else "N"
+                now_live_yn = "Y" if schedule.broadcast_time_start <= datetime.now().time() <= schedule.broadcast_time_end else "N"
                 product_data = {
                     "p_id": product.product_id,
                     "p_name": product.product_name,
