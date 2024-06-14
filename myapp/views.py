@@ -1,134 +1,168 @@
+from pymongo import MongoClient
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from django.db.models import Q
-from .models import Product, HomeShopping, BroadcastSchedule, BroadcastProduct, SimilarProduct
-# import datetime
-from datetime import datetime 
+import datetime
+import os
 
-#홈쇼핑 방송상품 리스트(메인) 페이지
+# MongoDB 클라이언트 설정을 위한 함수
+def get_mongo_collection(collection_name, db_name='quickcatch'):
+    # 환경변수에서 MongoDB 서버의 IP 주소와 포트 번호 읽기
+    mongo_ip       = os.getenv('MONGO_IP', '43.203.249.162')
+    mongo_port     = os.getenv('MONGO_PORT', '27017')
+    db_name        = os.getenv('MONGO_DB_NAME', db_name)
+    mongo_user     = os.getenv('MONGO_USER', 'quickcatch')
+    mongo_password = os.getenv('MONGO_PASSWORD', 'pass123')
+
+    # 포트 번호는 정수로 변환
+    mongo_port = int(mongo_port)
+
+    # MongoDB URI 생성
+    mongo_uri = f"mongodb://{mongo_user}:{mongo_password}@{mongo_ip}:{mongo_port}/{db_name}"
+    
+    # MongoDB 클라이언트 설정
+    # client     = MongoClient(mongo_ip, mongo_port, mongo_password)
+    client     = MongoClient(mongo_uri)
+    db         = client[db_name]
+    collection = db[collection_name]
+    return collection
+
+# 홈쇼핑 방송상품 리스트(메인) 호출(해당 홈쇼핑사별)
 class BroadcastProductListView(APIView):
-
     def get(self, request, *args, **kwargs):
-        date = request.GET.get('date')
-        site_name_1 = request.GET.get('site_name_1')
-        site_name_2 = request.GET.get('site_name_2')
-        site_name_3 = request.GET.get('site_name_3')
-
-        if not date or not site_name_1 or not site_name_2 or not site_name_3:
-            return Response({"message": "Missing required parameters"}, status=status.HTTP_400_BAD_REQUEST)
-
+        date      = request.GET.get('date')
+        site_name = request.GET.get('site_name')
+        
+        if not date or not site_name:
+            return Response({"message": "error", "details":  "Missing required parameters"}, status=status.HTTP_400_BAD_REQUEST)
+        
         try:
-            broadcast_date = datetime.strptime(date, '%Y-%m-%d').date()
+            # 데이터베이스에 저장된 날짜 형식에 맞춰 변환
+            broadcast_date = datetime.datetime.strptime(date, '%Y-%m-%d').strftime('%Y%m%d')
         except ValueError:
             return Response({"message": "Invalid date format"}, status=status.HTTP_400_BAD_REQUEST)
-
-        sites = [site_name_1, site_name_2, site_name_3]
-        home_shopping_sites = HomeShopping.objects.filter(home_shopping_id__in=sites)
-
-        result_list = []
-
-        for site in home_shopping_sites:
-            # BroadcastSchedule에서 날짜와 홈쇼핑사로 필터링
-            schedules = BroadcastSchedule.objects.filter(
-                broadcast_date=broadcast_date,
-                product__home_shopping=site
-            )
-            product_list = []
-
-            for schedule in schedules:
-                product = schedule.product
-                now_live_yn = "Y" if schedule.broadcast_time_start <= datetime.now().time() <= schedule.broadcast_time_end else "N"
-                product_data = {
-                    "p_id": product.product_id,
-                    "p_name": product.product_name,
-                    "p_price": f"{product.price:,}원",
-                    "live_time": schedule.broadcast_time_start.strftime("%H:%M:%S") if schedule else None,
-                    "now_live_yn": now_live_yn,
-                    "img_url": product.product_image_url,
-                    "p_url": product.product_url,
-                    "live_start_time": schedule.broadcast_time_start.strftime("%H:%M:%S") if schedule else None,
-                    "live_end_time": schedule.broadcast_time_end.strftime("%H:%M:%S") if schedule else None
-                }
-                product_list.append(product_data)
-
-            result_list.append({
-                "site_name": site.name,
-                "products": product_list
-            })
-
+        
+        # MongoDB 컬렉션 가져오기
+        broadcast_collection = get_mongo_collection('broadcast')
+        
+        # 방송 스케줄 필터링
+        schedules = list(broadcast_collection.find({
+            "broadcast_date": broadcast_date,
+            "site_name"     : site_name
+        }))
+        
+        product_list = []
+        for schedule in schedules:
+            now_live_yn = "Y" if schedule['start_time'] <= datetime.datetime.now().strftime('%H:%M:%S') <= schedule['end_time'] else "N"
+            
+            product_data = {
+                "p_id"           : schedule['product_id'],
+                "p_name"         : schedule['name'],
+                "p_price"        : schedule['price'],
+                "now_live_yn"    : now_live_yn,
+                "img_url"        : schedule['image_url'],
+                "start_time"     : schedule['start_time'],
+                "end_time"       : schedule['end_time']
+            }
+            product_list.append(product_data)
+        
         response_data = {
             "message": "success",
-            "date": date,
-            "list": result_list
+            "result" : {
+                "broadcast_date" : broadcast_date,
+                "site_name"      : site_name,
+                "product_list"   : product_list
+            }
         }
-
+        
         return Response(response_data, status=status.HTTP_200_OK)
-    
-#홈쇼핑 방송상품 상세 페이지
+
+# 홈쇼핑 방송상품 상세 페이지
 class BroadcastProductDetails(APIView):
-    def get(self, request, product_id):
+    def get(self, request, *args, **kwargs):
+        product_id = request.GET.get('product_id')
+
+        if not product_id:
+            return Response({"message": "error", "details":  "Missing required parameters"}, status=status.HTTP_400_BAD_REQUEST)    
+       
         try:
+            # MongoDB 컬렉션 가져오기
+            broadcast_collection = get_mongo_collection('broadcast')
+            
             # 해당 product_id에 대한 상품 정보 조회
-            product            = Product.objects.get(product_id=product_id)
-            broadcast_schedule = BroadcastSchedule.objects.get(product_id=product_id)
-            broadcast_product  = BroadcastProduct.objects.get(product_id=product_id)
+            search_product = broadcast_collection.find_one({"product_id": product_id})
+            
+            if not search_product:
+                raise Exception("Product information not found")
             
             # broadcast_schedule.broadcast_time_start와 broadcast_schedule.broadcast_time_end를 datetime 형식으로 변환
-            now = datetime.now()
-            broadcast_start_datetime = datetime.combine(now.date(), broadcast_schedule.broadcast_time_start)
-            broadcast_end_datetime   = datetime.combine(now.date(), broadcast_schedule.broadcast_time_end)
-
+            now = datetime.datetime.now()
+            broadcast_start_datetime = datetime.datetime.combine(now.date(), datetime.datetime.strptime(search_product['start_time'], '%H:%M').time())
+            broadcast_end_datetime   = datetime.datetime.combine(now.date(), datetime.datetime.strptime(search_product['end_time'], '%H:%M').time())
+            
             # 현재 시간 기준으로 라이브 방송 여부 판단
             now_live_yn = 'y' if broadcast_start_datetime <= now <= broadcast_end_datetime else 'n'
             
             response_data = {
                 "message": "success",
                 "details": {
-                    "site_name"      : product.home_shopping.name,
-                    "p_id"           : product.product_id,
-                    "p_name"         : product.product_name,
-                    "p_price"        : product.price,
-                    "live_time"      : broadcast_schedule.broadcast_time_start,
+                    "site_name"      : search_product['site_name'],
+                    "p_id"           : search_product['product_id'],
+                    "p_name"         : search_product['name'],
+                    "broadcast_date" : search_product['broadcast_date'],
+                    "p_price"        : search_product['price'],
                     "now_live_yn"    : now_live_yn,
-                    "img_url"        : product.product_image_url,
-                    "live_url"       : broadcast_product.product_video_url,
-                    "sales_url"      : product.product_url,
-                    "live_start_time": broadcast_schedule.broadcast_time_start,
-                    "live_end_time"  : broadcast_schedule.broadcast_time_end
+                    "img_url"        : search_product['image_url'],
+                    "start_time"     : search_product['start_time'],
+                    "end_time"       : search_product['end_time']
                 }
             }
             
             return Response(response_data, status=status.HTTP_200_OK)
-        except (Product.DoesNotExist, BroadcastSchedule.DoesNotExist, BroadcastProduct.DoesNotExist):
-            return Response({"message": "error", "details": "Product information not found."}, status=status.HTTP_404_NOT_FOUND)
-        
-#유사상품 리스트 호출
+        except Exception as e:
+            return Response({"message": "error", "details": str(e)}, status=status.HTTP_404_NOT_FOUND)
+
+# 해당 product_id에 대한 유사상품 호출
 class SimilarProductList(APIView):
-    def get(self, request, product_id):
-        # 해당 product_id에 대한 SimilarProduct 조회
-        similar_products = SimilarProduct.objects.filter(product_id=product_id)
+    def get(self, request, *args, **kwargs):
+        product_id = request.GET.get('product_id')
 
-        # similar_products가 비어 있는지 확인
-        if not similar_products:
-            return Response({"message": "error", "details": "Similar product information not found."}, status=status.HTTP_404_NOT_FOUND)
+        if not product_id:
+            return Response({"message": "error", "details":  "Missing required parameters"}, status=status.HTTP_400_BAD_REQUEST)            
+        
+        try:
+            # MongoDB 컬렉션 가져오기
+            similar_product_collection = get_mongo_collection('similar_product')
+            
+            # 해당 product_id에 대한 유사상품 전체 조회
+            similar_products = list(similar_product_collection.find({"product_id": product_id}))
 
-        compare_list = []
+            if len(similar_products) == 0:
+                 return Response({"message": "error", "details":  "Product information not found"}, status=status.HTTP_404_NOT_FOUND)
+                     
+            product_list = []
+            for similar_product in similar_products:
 
-        for similarProduct in similar_products:
-            product_info = {
-                "p_id"      : similarProduct.product_id,
-                "site_name" : similarProduct.seller,
-                "p_name"    : similarProduct.product_name,
-                "p_price"   : similarProduct.price,
-                "img_url"   : similarProduct.product_image_url,
-                "sales_url" : similarProduct.product_url
+                s_product_data= {
+                    "p_id"           : similar_product['product_id'],
+                    "s_name"         : similar_product['product_name'],
+                    "s_price"        : similar_product['price'],
+                    "seller"         : similar_product['seller'],
+                    "img_url"        : similar_product['image_url'],
+                    "redirect_url"   : similar_product['redirect_url'],   
+                }
+
+                product_list.append(s_product_data)
+
+            response_data = {
+                "message": "success",
+                "result" : {
+                    "product_list": product_list
+                }
             }
-            compare_list.append(product_info)
+            
+            return Response(response_data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"message": "error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        response_data = {
-            "message": "success",
-            "compare_list": compare_list
-        }
-
-        return Response(response_data, status=status.HTTP_200_OK)
+        
