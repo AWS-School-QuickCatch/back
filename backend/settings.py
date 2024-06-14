@@ -83,16 +83,16 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'quickcatch',
-        'USER' : 'quickcatch',
-        'PASSWORD' : 'k8spass#', # 설정한 비밀번호로 적어주면 된다.
-        'HOST' : '52.79.179.141',
-        'PORT' : '3306',
-    }
-}
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'quickcatch',
+#         'USER' : 'quickcatch',
+#         'PASSWORD' : 'k8spass#', # 설정한 비밀번호로 적어주면 된다.
+#         'HOST' : '52.79.179.141',
+#         'PORT' : '3306',
+#     }
+# }
 
 
 # Password validation
