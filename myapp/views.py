@@ -101,20 +101,21 @@ class BroadcastProductDetails(APIView):
             broadcast_end_datetime   = datetime.datetime.combine(now.date(), datetime.datetime.strptime(search_product['end_time'], '%H:%M').time())
             
             # 현재 시간 기준으로 라이브 방송 여부 판단
-            now_live_yn = 'y' if broadcast_start_datetime <= now <= broadcast_end_datetime else 'n'
+            now_live_yn = 'Y' if broadcast_start_datetime <= now <= broadcast_end_datetime else 'N'
             
             response_data = {
                 "message": "success",
                 "details": {
-                    "site_name"      : search_product['site_name'],
-                    "p_id"           : search_product['product_id'],
-                    "p_name"         : search_product['name'],
-                    "broadcast_date" : search_product['broadcast_date'],
-                    "p_price"        : search_product['price'],
-                    "now_live_yn"    : now_live_yn,
-                    "img_url"        : search_product['image_url'],
-                    "start_time"     : search_product['start_time'],
-                    "end_time"       : search_product['end_time']
+                    "site_name"       : search_product['site_name'],
+                    "p_id"            : search_product['product_id'],
+                    "p_name"          : search_product['name'],
+                    "broadcast_date"  : search_product['broadcast_date'],
+                    "p_price"         : search_product['price'],
+                    "now_live_yn"     : now_live_yn,
+                    "img_url"         : search_product['image_url'],
+                    "start_time"      : search_product['start_time'],
+                    "end_time"        : search_product['end_time'],
+                    "img_url_details" : search_product['detail_images']
                 }
             }
             
