@@ -50,10 +50,31 @@ class BroadcastProductListView(APIView):
             "broadcast_date": broadcast_date,
             "site_name"     : site_name
         }))
+
+        #현재 시간 확인
+        now = datetime.datetime.now()
+        now_rm = now.replace(tzinfo=None)
         
         product_list = []
         for schedule in schedules:
-            now_live_yn = "Y" if schedule['start_time'] <= datetime.datetime.now().strftime('%H:%M:%S') <= schedule['end_time'] else "N"
+            # 값 초기화
+            broadcast_start_datetime = ''
+            broadcast_end_datetime = ''
+
+            # 'N/A' 예외 처리 위한 조건 추가
+            if schedule['start_time'] != 'N/A' and schedule['end_time'] != 'N/A':
+                #now_live_yn = "Y" if schedule['start_time'] <= datetime.datetime.now().strftime('%H:%M:%S') <= schedule['end_time'] else "N"
+                broadcast_start_datetime = datetime.datetime.combine(now.date(), datetime.datetime.strptime(schedule['start_time'], '%H:%M').time())
+                broadcast_end_datetime   = datetime.datetime.combine(now.date(), datetime.datetime.strptime(schedule['end_time'], '%H:%M').time())
+
+                #timezone 제거
+                broadcast_start_datetime_rm = broadcast_start_datetime.replace(tzinfo=None)
+                broadcast_end_datetime_rm = broadcast_end_datetime.replace(tzinfo=None)
+
+                # 현재 시간 기준으로 라이브 방송 여부 판단
+                now_live_yn = 'Y' if broadcast_start_datetime_rm <= now_rm <= broadcast_end_datetime_rm else 'N'
+            else:
+                now_live_yn = 'N'
             
             product_data = {
                 "p_id"           : schedule['product_id'],
@@ -99,9 +120,14 @@ class BroadcastProductDetails(APIView):
             now = datetime.datetime.now()
             broadcast_start_datetime = datetime.datetime.combine(now.date(), datetime.datetime.strptime(search_product['start_time'], '%H:%M').time())
             broadcast_end_datetime   = datetime.datetime.combine(now.date(), datetime.datetime.strptime(search_product['end_time'], '%H:%M').time())
+
+            #timezone 제거
+            now_rm = now.replace(tzinfo=None)
+            broadcast_start_datetime_rm = broadcast_start_datetime.replace(tzinfo=None)
+            broadcast_end_datetime_rm = broadcast_end_datetime.replace(tzinfo=None)
             
             # 현재 시간 기준으로 라이브 방송 여부 판단
-            now_live_yn = 'Y' if broadcast_start_datetime <= now <= broadcast_end_datetime else 'N'
+            now_live_yn = 'Y' if broadcast_start_datetime_rm <= now_rm <= broadcast_end_datetime_rm else 'N'
             
             response_data = {
                 "message": "success",
