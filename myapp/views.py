@@ -53,7 +53,6 @@ class BroadcastProductListView(APIView):
 
         #현재 시간 확인
         now = datetime.datetime.now()
-        now_rm = now.replace(tzinfo=None)
         
         product_list = []
         for schedule in schedules:
@@ -66,27 +65,23 @@ class BroadcastProductListView(APIView):
                 #now_live_yn = "Y" if schedule['start_time'] <= datetime.datetime.now().strftime('%H:%M:%S') <= schedule['end_time'] else "N"
                 broadcast_start_datetime = datetime.datetime.combine(now.date(), datetime.datetime.strptime(schedule['start_time'], '%H:%M').time())
                 broadcast_end_datetime   = datetime.datetime.combine(now.date(), datetime.datetime.strptime(schedule['end_time'], '%H:%M').time())
-
-                #timezone 제거
-                broadcast_start_datetime_rm = broadcast_start_datetime.replace(tzinfo=None)
-                broadcast_end_datetime_rm = broadcast_end_datetime.replace(tzinfo=None)
+                
+                start_datetime_add_9 =  broadcast_start_datetime + datetime.timedelta(hours=9)
+                end_datetime_add_9 = broadcast_end_datetime + datetime.timedelta(hours=9)
 
                 # 현재 시간 기준으로 라이브 방송 여부 판단
-                now_live_yn = 'Y' if broadcast_start_datetime_rm <= now_rm <= broadcast_end_datetime_rm else 'N'
-            else:
-                now_live_yn = 'N'
-            
-            product_data = {
-                "p_id"           : schedule['product_id'],
-                "p_name"         : schedule['name'],
-                "p_price"        : schedule['price'],
-                "now_live_yn"    : now_live_yn,
-                "img_url"        : schedule['image_url'],
-                "start_time"     : schedule['start_time'],
-                "end_time"       : schedule['end_time']
-            }
-            product_list.append(product_data)
-        
+                now_live_yn = 'Y' if start_datetime_add_9 <= now <= end_datetime_add_9 else 'N'
+                product_data = {
+                    "p_id"           : schedule['product_id'],
+                    "p_name"         : schedule['name'],
+                    "p_price"        : schedule['price'],
+                    "now_live_yn"    : now_live_yn,
+                    "img_url"        : schedule['image_url'],
+                    "start_time"     : schedule['start_time'],
+                    "end_time"       : schedule['end_time'],
+                }
+                product_list.append(product_data)
+
         response_data = {
             "message": "success",
             "result" : {
@@ -121,13 +116,11 @@ class BroadcastProductDetails(APIView):
             broadcast_start_datetime = datetime.datetime.combine(now.date(), datetime.datetime.strptime(search_product['start_time'], '%H:%M').time())
             broadcast_end_datetime   = datetime.datetime.combine(now.date(), datetime.datetime.strptime(search_product['end_time'], '%H:%M').time())
 
-            #timezone 제거
-            now_rm = now.replace(tzinfo=None)
-            broadcast_start_datetime_rm = broadcast_start_datetime.replace(tzinfo=None)
-            broadcast_end_datetime_rm = broadcast_end_datetime.replace(tzinfo=None)
+            start_datetime_add_9 =  broadcast_start_datetime + datetime.timedelta(hours=9)
+            end_datetime_add_9 = broadcast_end_datetime + datetime.timedelta(hours=9)
             
             # 현재 시간 기준으로 라이브 방송 여부 판단
-            now_live_yn = 'Y' if broadcast_start_datetime_rm <= now_rm <= broadcast_end_datetime_rm else 'N'
+            now_live_yn = 'Y' if start_datetime_add_9 <= now <= end_datetime_add_9 else 'N'
             
             response_data = {
                 "message": "success",
