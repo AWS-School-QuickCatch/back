@@ -67,10 +67,10 @@ class BroadcastProductListView(APIView):
                 broadcast_end_datetime   = datetime.datetime.combine(now.date(), datetime.datetime.strptime(schedule['end_time'], '%H:%M').time())
                 
                 start_datetime_add_9 =  broadcast_start_datetime + datetime.timedelta(hours=-9)
-                end_datetime_add_9 = broadcast_end_datetime + datetime.timedelta(hours=-9)
+                end_datetime_add_9   = broadcast_end_datetime + datetime.timedelta(hours=-9)
 
                 # 현재 시간 기준으로 라이브 방송 여부 판단
-                now_live_yn = 'Y' if start_datetime_add_9 <= now <= end_datetime_add_9 else 'N'
+                now_live_yn  = 'Y' if start_datetime_add_9 <= now <= end_datetime_add_9 else 'N'
                 product_data = {
                     "p_id"           : schedule['product_id'],
                     "p_name"         : schedule['name'],
@@ -117,7 +117,7 @@ class BroadcastProductDetails(APIView):
             broadcast_end_datetime   = datetime.datetime.combine(now.date(), datetime.datetime.strptime(search_product['end_time'], '%H:%M').time())
 
             start_datetime_add_9 =  broadcast_start_datetime + datetime.timedelta(hours=-9)
-            end_datetime_add_9 = broadcast_end_datetime + datetime.timedelta(hours=-9)
+            end_datetime_add_9   = broadcast_end_datetime + datetime.timedelta(hours=-9)
             
             # 현재 시간 기준으로 라이브 방송 여부 판단
             now_live_yn = 'Y' if start_datetime_add_9 <= now <= end_datetime_add_9 else 'N'
@@ -134,6 +134,7 @@ class BroadcastProductDetails(APIView):
                     "img_url"         : search_product['image_url'],
                     "start_time"      : search_product['start_time'],
                     "end_time"        : search_product['end_time'],
+                    "redirect_url"    : search_product['redirect_url'],
                     "img_url_details" : search_product['detail_images']
                 }
             }
