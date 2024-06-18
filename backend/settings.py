@@ -12,10 +12,25 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 from pathlib import Path
+import environ
+import os
+
+# BASE_DIR 설정
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# 환경변수 읽기 위한 설정
+env = environ.Env()
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+
+# MongoDB 설정
+MONGO_IP = env('MONGO_IP')
+MONGO_PORT = env('MONGO_PORT')
+MONGO_DB_NAME = env('MONGO_DB_NAME')
+MONGO_USER = env('MONGO_USER')
+MONGO_PASSWORD = env('MONGO_PASSWORD')
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
