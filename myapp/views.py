@@ -8,18 +8,18 @@ import os
 # MongoDB 클라이언트 설정을 위한 함수
 def get_mongo_collection(collection_name, db_name='quickcatch'):
     # 환경변수에서 MongoDB 서버의 IP 주소와 포트 번호 읽기
-    # mongo_ip       = os.getenv('MONGO_IP')
-    # mongo_port     = os.getenv('MONGO_PORT')
-    # db_name        = os.getenv('MONGO_DB_NAME')
-    # mongo_user     = os.getenv('MONGO_USER')
-    # mongo_password = os.getenv('MONGO_PASSWORD')
+    mongo_ip       = os.getenv('MONGO_IP')
+    mongo_port     = os.getenv('MONGO_PORT')
+    db_name        = os.getenv('MONGO_DB_NAME')
+    mongo_user     = os.getenv('MONGO_USER')
+    mongo_password = os.getenv('MONGO_PASSWORD')
     
     #로컬 테스트용
-    mongo_ip       = "192.168.0.6"
-    mongo_port     = 27017
-    db_name        = "quickcatch"
-    mongo_user     = "quickcatch"
-    mongo_password = "pass123"
+    # mongo_ip       = "192.168.0.6"
+    # mongo_port     = 27017
+    # db_name        = "quickcatch"
+    # mongo_user     = "quickcatch"
+    # mongo_password = "pass123"
 
     # 포트 번호는 정수로 변환
     mongo_port = int(mongo_port)
@@ -210,42 +210,37 @@ class SimilarProductList(APIView):
         product_id = request.GET.get('product_id')
 
         if not product_id:
-            return Response({"message": "error", "details":  "Missing required parameters"}, status=status.HTTP_400_BAD_REQUEST)            
+            return Response({"message": "error", 
+                             "details":  "Missing required parameters"}, 
+                             status=status.HTTP_400_BAD_REQUEST)            
         
         try:
             # MongoDB 컬렉션 가져오기
             similar_product_collection = get_mongo_collection('similar_product')
             
             # 해당 product_id에 대한 유사상품 전체 조회
-            similar_products = list(similar_product_collection.find({"product_id": product_id}))
+            similar_products = similar_product_collection.find_one({"product_id": product_id})
 
-            if len(similar_products) == 0:
-                 return Response({"message": "error", "details":  "Product information not found"}, status=status.HTTP_404_NOT_FOUND)
+            if not similar_products:
+                return Response({"message": "error", "details":  "Product information not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            # 유사 상품 리스트를 price 기준 저렴한 순으로 정렬
+            sorted_similar_products = sorted(similar_products['similar_products'], key=lambda x: int(x['price']))
                      
-            product_list = []
-            for similar_product in similar_products:
-
-                s_product_data= {
-                    "p_id"           : similar_product['product_id'],
-                    "s_name"         : similar_product['product_name'],
-                    "s_price"        : similar_product['price'],
-                    "seller"         : similar_product['seller'],
-                    "img_url"        : similar_product['image_url'],
-                    "redirect_url"   : similar_product['redirect_url'],   
-                }
-
-                product_list.append(s_product_data)
+            similar_product_data= {
+                "p_id"            : similar_products['product_id'],
+                "similar_products": sorted_similar_products
+            }
 
             response_data = {
                 "message": "success",
-                "result" : {
-                    "product_list": product_list
-                }
+                "result" : similar_product_data
             }
             
             return Response(response_data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"message": "error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 # 해당 product_id에 대한 리뷰 요약 데이터 호출
 class ReviewList(APIView):
