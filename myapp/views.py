@@ -8,18 +8,18 @@ import os
 # MongoDB 클라이언트 설정을 위한 함수
 def get_mongo_collection(collection_name, db_name='quickcatch'):
     # 환경변수에서 MongoDB 서버의 IP 주소와 포트 번호 읽기
-    mongo_ip       = os.getenv('MONGO_IP')
-    mongo_port     = os.getenv('MONGO_PORT')
-    db_name        = os.getenv('MONGO_DB_NAME')
-    mongo_user     = os.getenv('MONGO_USER')
-    mongo_password = os.getenv('MONGO_PASSWORD')
+    # mongo_ip       = os.getenv('MONGO_IP')
+    # mongo_port     = os.getenv('MONGO_PORT')
+    # db_name        = os.getenv('MONGO_DB_NAME')
+    # mongo_user     = os.getenv('MONGO_USER')
+    # mongo_password = os.getenv('MONGO_PASSWORD')
     
     #로컬 테스트용
-    # mongo_ip       = "192.168.0.6"
-    # mongo_port     = 27017
-    # db_name        = "quickcatch"
-    # mongo_user     = "quickcatch"
-    # mongo_password = "pass123"
+    mongo_ip       = "192.168.0.6"
+    mongo_port     = 27017
+    db_name        = "quickcatch"
+    mongo_user     = "quickcatch"
+    mongo_password = "pass123"
 
     # 포트 번호는 정수로 변환
     mongo_port = int(mongo_port)
@@ -160,7 +160,7 @@ class BroadcastProductDetails(APIView):
         product_id = request.GET.get('product_id')
 
         if not product_id:
-            return Response({"message": "error", "details":  "Missing required parameters"}, status=status.HTTP_400_BAD_REQUEST)    
+            return Response({"message": "error", "details": "Missing required parameters"}, status=status.HTTP_400_BAD_REQUEST)    
        
         try:
             # MongoDB 컬렉션 가져오기
@@ -173,12 +173,12 @@ class BroadcastProductDetails(APIView):
                 raise Exception("Product information not found")
             
             # broadcast_schedule.broadcast_time_start와 broadcast_schedule.broadcast_time_end를 datetime 형식으로 변환
-            now = datetime.datetime.now()
-            broadcast_start_datetime = datetime.datetime.combine(now.date(), datetime.datetime.strptime(search_product['start_time'], '%H:%M').time())
-            broadcast_end_datetime   = datetime.datetime.combine(now.date(), datetime.datetime.strptime(search_product['end_time'], '%H:%M').time())
+            now = datetime.now()
+            broadcast_start_datetime = datetime.combine(now.date(), datetime.strptime(search_product['start_time'], '%H:%M').time())
+            broadcast_end_datetime   = datetime.combine(now.date(), datetime.strptime(search_product['end_time'], '%H:%M').time())
 
-            start_datetime_add_9 =  broadcast_start_datetime + datetime.timedelta(hours=-9)
-            end_datetime_add_9   = broadcast_end_datetime + datetime.timedelta(hours=-9)
+            start_datetime_add_9 = broadcast_start_datetime + timedelta(hours=-9)
+            end_datetime_add_9   = broadcast_end_datetime + timedelta(hours=-9)
             
             # 현재 시간 기준으로 라이브 방송 여부 판단
             now_live_yn = 'Y' if start_datetime_add_9 <= now <= end_datetime_add_9 else 'N'
@@ -186,17 +186,17 @@ class BroadcastProductDetails(APIView):
             response_data = {
                 "message": "success",
                 "details": {
-                    "site_name"       : search_product['site_name'],
-                    "p_id"            : search_product['product_id'],
-                    "p_name"          : search_product['name'],
-                    "broadcast_date"  : search_product['broadcast_date'],
-                    "p_price"         : search_product['price'],
-                    "now_live_yn"     : now_live_yn,
-                    "img_url"         : search_product['image_url'],
-                    "start_time"      : search_product['start_time'],
-                    "end_time"        : search_product['end_time'],
-                    "redirect_url"    : search_product['redirect_url'],
-                    "img_url_details" : search_product['detail_images']
+                    "site_name"      : search_product['site_name'],
+                    "p_id"           : search_product['product_id'],
+                    "p_name"         : search_product['name'],
+                    "broadcast_date" : search_product['broadcast_date'],
+                    "p_price"        : search_product['price'],
+                    "now_live_yn"    : now_live_yn,
+                    "img_url"        : search_product['image_url'],
+                    "start_time"     : search_product['start_time'],
+                    "end_time"       : search_product['end_time'],
+                    "redirect_url"   : search_product['redirect_url'],
+                    "img_url_details": search_product['detail_images']
                 }
             }
             
@@ -247,7 +247,7 @@ class SimilarProductList(APIView):
         except Exception as e:
             return Response({"message": "error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-# 해당 product_id에 대한 유사상품 호출
+# 해당 product_id에 대한 리뷰 요약 데이터 호출
 class ReviewList(APIView):
     def get(self, request, *args, **kwargs):
         product_id = request.GET.get('product_id')
