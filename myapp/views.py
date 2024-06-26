@@ -8,18 +8,18 @@ import os
 # MongoDB 클라이언트 설정을 위한 함수
 def get_mongo_collection(collection_name, db_name='quickcatch'):
     # 환경변수에서 MongoDB 서버의 IP 주소와 포트 번호 읽기
-    # mongo_ip       = os.getenv('MONGO_IP')
-    # mongo_port     = os.getenv('MONGO_PORT')
-    # db_name        = os.getenv('MONGO_DB_NAME')
-    # mongo_user     = os.getenv('MONGO_USER')
-    # mongo_password = os.getenv('MONGO_PASSWORD')
+    mongo_ip       = os.getenv('MONGO_IP')
+    mongo_port     = os.getenv('MONGO_PORT')
+    db_name        = os.getenv('MONGO_DB_NAME')
+    mongo_user     = os.getenv('MONGO_USER')
+    mongo_password = os.getenv('MONGO_PASSWORD')
     
     #로컬 테스트용
-    mongo_ip       = "192.168.0.6"
-    mongo_port     = 27017
-    db_name        = "quickcatch"
-    mongo_user     = "quickcatch"
-    mongo_password = "pass123"
+    # mongo_ip       = "192.168.0.6"
+    # mongo_port     = 27017
+    # db_name        = "quickcatch"
+    # mongo_user     = "quickcatch"
+    # mongo_password = "pass123"
 
     # 포트 번호는 정수로 변환
     mongo_port = int(mongo_port)
