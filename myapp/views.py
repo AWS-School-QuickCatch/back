@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from datetime import datetime, timedelta
 import os
+import math
 
 # MongoDB 클라이언트 설정을 위한 함수
 def get_mongo_collection(collection_name, db_name='quickcatch'):
@@ -280,3 +281,92 @@ class ReviewList(APIView):
             return Response(response_data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"message": "error", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+# 눈여겨볼 상품 리스트 호출(메인페이지)
+class MainHotdealList(APIView):
+    def get(self, request, *args, **kwargs):
+        date = request.GET.get('date')
+        
+        if not date:
+            return Response({"message": "error", "details": "Missing required parameters"}, status=status.HTTP_400_BAD_REQUEST)     
+
+        try:
+            broadcast_date_obj = datetime.strptime(date, '%Y-%m-%d')
+            broadcast_date_str = broadcast_date_obj.strftime('%Y%m%d')
+        except ValueError:
+            return Response({"message": "Invalid date format"}, status=status.HTTP_400_BAD_REQUEST)
+
+        broadcast_collection       = get_mongo_collection('broadcast')
+        similar_product_collection = get_mongo_collection('similar_product')
+
+        now = datetime.now()
+
+        if broadcast_date_obj.date() <= now.date():
+            update_date_obj = broadcast_date_obj - timedelta(days=1)
+            query = {
+                "broadcast_date": broadcast_date_str,
+                "$or": [
+                    {"update_date": update_date_obj.strftime('%Y%m%d')},
+                    {"update_date": broadcast_date_obj.strftime('%Y%m%d')}
+                ]
+            }
+        else:
+            update_date_obj = now - timedelta(days=1)
+            query = {
+                "broadcast_date": broadcast_date_str,
+                "$or": [
+                    {"update_date": update_date_obj.strftime('%Y%m%d')},
+                    {"update_date": now.strftime('%Y%m%d')}
+                ]
+            }
+        schedules = list(broadcast_collection.find(query))
+
+        product_list = []
+        seen_names   = set()  # 크롤링 시, 중복상품 발생 시 처리 위함
+
+        for schedule in schedules:
+            if schedule['start_time'] != 'N/A' and schedule['end_time'] != 'N/A':
+                try:
+                    similar_products = list(similar_product_collection.find({
+                        "product_id": schedule['product_id']
+                    }))
+
+                    similar_product_list = []
+                    for similar_product in similar_products:
+                        similar_product_list.extend(similar_product['similar_products'])
+
+                    similar_product_list = sorted(similar_product_list, key=lambda x: int(x['price']))[:1]
+
+                    if similar_product_list:
+                        similar_product_price = int(similar_product_list[0]['price'])
+                        schedule_price        = int(schedule['price'])
+                        price_difference      = math.trunc(((similar_product_price - schedule_price) / schedule_price) * 100)
+
+                        # 100% 이상 싼 경우는 신뢰할 수 없음으로 간주해서 제외 시킴, 홈쇼핑 상품이 더 비싼 경우 제외 시킴.
+                        if price_difference < 100 and price_difference > 0:
+                            product_data = {
+                                "p_id"            : schedule['product_id'],
+                                "p_name"          : schedule['name'],
+                                "p_price"         : schedule['price'],
+                                "site_name"       : schedule['site_name'],
+                                "img_url"         : schedule['image_url'],
+                                "price_difference": price_difference
+                            }
+
+                            if product_data['p_name'] not in seen_names:
+                                seen_names.add(product_data['p_name'])
+                                product_list.append(product_data)
+                except ValueError:
+                    continue
+
+        product_list = sorted(product_list, key=lambda x: x['price_difference'], reverse=True)[:9]  # UI 상 9개만 우선 호출
+
+        response_data = {
+            "message": "success",
+            "result": {
+                "broadcast_date": broadcast_date_str,
+                "product_list"  : product_list
+            }
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
