@@ -359,7 +359,7 @@ class MainHotdealList(APIView):
                 except ValueError:
                     continue
 
-        product_list = sorted(product_list, key=lambda x: x['price_difference'], reverse=True)[:9]  # UI 상 9개만 우선 호출
+        product_list = sorted(product_list, key=lambda x: x['price_difference'], reverse=True)[:9]  # UI 상 9개만 우선 호출.
 
         response_data = {
             "message": "success",
