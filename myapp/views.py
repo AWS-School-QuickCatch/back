@@ -5,6 +5,12 @@ from rest_framework import status
 from datetime import datetime, timedelta
 import os
 import math
+from django.http import JsonResponse
+
+
+def health_check(request):
+    return JsonResponse({"status": "ok"})
+
 
 # MongoDB 클라이언트 설정을 위한 함수
 def get_mongo_collection(collection_name, db_name='quickcatch'):
